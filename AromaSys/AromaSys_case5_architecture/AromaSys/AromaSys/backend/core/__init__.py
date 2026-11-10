@@ -1,0 +1,1 @@
+# Core utilities: auth helpers, responses, exceptions, logging
