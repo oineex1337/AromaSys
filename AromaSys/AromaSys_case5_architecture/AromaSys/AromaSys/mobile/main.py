@@ -22,7 +22,7 @@ from kivy.uix.widget import Widget
 
 
 # Адрес локального Flask API. Все операции приложения выполняются через HTTP API.
-API_URL = "http://127.0.0.1:5000"
+API_URL = "http://152.228.114.127"
 
 try:
     from admin_config import ADMIN_EMAIL
