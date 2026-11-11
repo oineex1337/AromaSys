@@ -1,3 +1,4 @@
+import os
 import re
 import threading
 from copy import deepcopy
@@ -12,7 +13,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.image import AsyncImage
+from kivy.uix.image import AsyncImage, Image
 from kivy.uix.label import Label
 from kivy.uix.modalview import ModalView
 from kivy.uix.scrollview import ScrollView
@@ -115,37 +116,37 @@ class AromaSysApp(App):
 
     THEMES = {
         "light": {
-            "bg": (1, 1, 1, 1),
-            "panel": (0.965, 0.965, 0.965, 1),
-            "input": (0.945, 0.945, 0.945, 1),
-            "text": (0.07, 0.07, 0.07, 1),
-            "muted": (0.45, 0.45, 0.45, 1),
-            "accent": (0.93, 0.73, 0.13, 1),
-            "accent_text": (0.62, 0.45, 0.02, 1),
+             "bg": (0.98, 0.97, 0.94, 1),
+            "panel": (1, 1, 1, 1),
+            "input": (0.95, 0.94, 0.91, 1),
+            "text": (0.10, 0.09, 0.08, 1),
+            "muted": (0.43, 0.41, 0.37, 1),
+            "accent": (0.82, 0.63, 0.25, 1),
+            "accent_text": (0.58, 0.40, 0.10, 1),
             "primary": (0.07, 0.07, 0.07, 1),
             "primary_text": (1, 1, 1, 1),
-            "soft": (0.935, 0.935, 0.935, 1),
-            "promo": (0.93, 0.73, 0.13, 1),
-            "promo_text": (0.07, 0.07, 0.07, 1),
-            "selection": (0.93, 0.73, 0.13, 0.35),
-            "divider": (0.88, 0.88, 0.88, 1),
+             "soft": (0.93, 0.91, 0.86, 1),
+            "promo": (0.12, 0.11, 0.09, 1),
+            "promo_text": (0.98, 0.96, 0.91, 1),
+            "selection": (0.82, 0.63, 0.25, 0.35),
+            "divider": (0.88, 0.86, 0.81, 1),
             "danger": (0.80, 0.15, 0.15, 1),
         },
         "dark": {
-            "bg": (0.07, 0.07, 0.07, 1),
-            "panel": (0.13, 0.13, 0.13, 1),
-            "input": (0.17, 0.17, 0.17, 1),
+             "bg": (0.055, 0.052, 0.047, 1),
+            "panel": (0.12, 0.11, 0.095, 1),
+            "input": (0.17, 0.155, 0.13, 1),
             "text": (0.97, 0.97, 0.97, 1),
             "muted": (0.62, 0.62, 0.62, 1),
-            "accent": (0.93, 0.73, 0.13, 1),
-            "accent_text": (0.93, 0.73, 0.13, 1),
+             "accent": (0.84, 0.65, 0.28, 1),
+            "accent_text": (0.91, 0.73, 0.40, 1),
             "primary": (0.97, 0.97, 0.97, 1),
             "primary_text": (0.07, 0.07, 0.07, 1),
-            "soft": (0.18, 0.18, 0.18, 1),
-            "promo": (0.93, 0.73, 0.13, 1),
-            "promo_text": (0.07, 0.07, 0.07, 1),
-            "selection": (0.93, 0.73, 0.13, 0.35),
-            "divider": (0.22, 0.22, 0.22, 1),
+             "soft": (0.18, 0.165, 0.14, 1),
+            "promo": (0.84, 0.65, 0.28, 1),
+            "promo_text": (0.08, 0.07, 0.06, 1),
+            "selection": (0.84, 0.65, 0.28, 0.35),
+            "divider": (0.23, 0.21, 0.18, 1),
             "danger": (0.75, 0.20, 0.18, 1),
         },
     }
@@ -176,6 +177,7 @@ class AromaSysApp(App):
         self.current_scroll = None
         self.product_form_item = None
         self.profile_values = {}
+        self.profile_avatar = "pr1.jpg"
         self.auth_values = {"login_email": "", "login_password": "", "reg_name": "", "reg_email": ""}
 
         self.root_layout = FloatLayout()
@@ -218,26 +220,79 @@ class AromaSysApp(App):
         paint(self, bar, "accent")
         return bar
 
+    def asset_path(self, filename):
+        """Путь к изображениям из backend/static для запуска из IDE и APK."""
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend", "static", filename))
+
+    def section_heading(self, filename, title, subtitle=""):
+        row = BoxLayout(size_hint_y=None, height=dp(62), spacing=dp(12))
+        row.add_widget(Image(source=self.asset_path(filename), size_hint=(None, None),
+                             size=(dp(54), dp(54)), allow_stretch=True, keep_ratio=True))
+        labels = BoxLayout(orientation="vertical", spacing=0)
+        labels.add_widget(self.label(title, 24, bold=True, height=34))
+        if subtitle:
+            labels.add_widget(self.label(subtitle, 11, self.colors["muted"], height=22))
+        row.add_widget(labels)
+        return row
+
+    def header_icon(self, filename, callback):
+        path = self.asset_path(filename)
+        button = Button(size_hint=(None, None), size=(dp(36), dp(36)),
+                        background_normal=path, background_down=path,
+                        background_color=(1, 1, 1, 1), border=(0, 0, 0, 0))
+        button.bind(on_press=callback)
+        return button
+
     def header(self, authenticated=False):
-        row = BoxLayout(size_hint_y=None, height=dp(56), padding=[dp(10), dp(6)], spacing=dp(4))
+        row = BoxLayout(size_hint_y=None, height=dp(60),
+                        padding=[dp(8), dp(5)], spacing=dp(5))
         if authenticated:
-            home = AromaButton(self, variant="ghost", text="ГЛАВНАЯ", size_hint_x=None,
-                               width=dp(92), height=dp(44))
+            home = AromaButton(self, variant="ghost", text="ГЛАВНАЯ",
+                               size_hint=(None, None), size=(dp(68), dp(42)))
+            home.font_size = dp(10)
             home.bind(on_press=lambda *_: self.show_home())
             row.add_widget(home)
         else:
-            row.add_widget(Widget(size_hint_x=None, width=dp(92)))
+            row.add_widget(Widget(size_hint_x=None, width=dp(8)))
+
         row.add_widget(Widget())
-        brand = self.label("AROMASYS", 18, bold=True, height=40, halign="center")
-        brand.size_hint_x = None
-        brand.width = dp(140)
-        row.add_widget(brand)
+        logo_btn = Button(size_hint=(None, None), size=(dp(52), dp(52)),
+                          background_normal=self.asset_path("AromaSys.jpg"),
+                          background_down=self.asset_path("AromaSys.jpg"),
+                          background_color=(1, 1, 1, 1), border=(0, 0, 0, 0))
+        logo_btn.bind(on_press=lambda *_: self.show_home() if authenticated else None)
+        row.add_widget(logo_btn)
         row.add_widget(Widget())
-        row.add_widget(Widget(size_hint_x=None, width=dp(92)))
-        box = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(57))
+
+        if authenticated:
+            nav = BoxLayout(size_hint=(None, None), size=(dp(126), dp(42)), spacing=dp(5))
+            nav.add_widget(self.header_icon("katalog.jpg", lambda *_: self.show_catalog()))
+            nav.add_widget(self.header_icon("heart.jpg", lambda *_: self.show_favorites()))
+            nav.add_widget(self.header_icon("profile.jpg", lambda *_: self.show_profile()))
+            row.add_widget(nav)
+        else:
+            row.add_widget(Widget(size_hint_x=None, width=dp(8)))
+
+        box = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(61))
         box.add_widget(row)
         box.add_widget(self.divider())
         return box
+
+    def local_product_image(self, item):
+        title = str(item.get("title", "")).casefold()
+        brand = str(item.get("brand", "")).casefold()
+        candidates = [
+            ("ronaldo", ("ронал", "ronaldo")),
+            ("sauvage", ("sauvage", "саваж")),
+            ("bleu-de-chanel", ("bleu", "блю")),
+            ("chanel-no", ("chanel no", "chanel №", "шанель")),
+        ]
+        for filename, needles in candidates:
+            if any(needle in title or needle in brand for needle in needles):
+                path = self.asset_path(filename + ".jpg")
+                if os.path.isfile(path):
+                    return path
+        return ""
 
     def scroll_content(self):
         scroll = ScrollView(do_scroll_x=False, bar_width=dp(3))
@@ -513,13 +568,13 @@ class AromaSysApp(App):
         content.add_widget(self.label(f"Здравствуйте, {self.current_username}", 22,
                                       bold=True, height=40))
 
-        promo = Card(self, key="promo", radius=8, orientation="vertical", padding=dp(20),
-                     spacing=dp(6), size_hint_y=None, height=dp(132))
-        promo.add_widget(self.label("НОВАЯ КОЛЛЕКЦИЯ", 11, self.colors["promo_text"], bold=True, height=22))
-        promo.add_widget(self.label("Подбери аромат\nпод настроение", 22,
-                                    self.colors["promo_text"], bold=True, height=60))
+        promo = Card(self, key="promo", radius=8, orientation="vertical", padding=[dp(20), dp(18)],
+                     spacing=dp(8), size_hint_y=None, height=dp(128))
+        promo.add_widget(self.label("НОВАЯ КОЛЛЕКЦИЯ", 11, self.colors["promo_text"], bold=True, height=20))
+        promo.add_widget(self.label("Подбери аромат под настроение", 20,
+                                    self.colors["promo_text"], bold=True, height=36))
         promo.add_widget(self.label("Авторские композиции и бестселлеры", 13,
-                                    self.colors["promo_text"], height=26))
+                                    self.colors["promo_text"], height=24))
         content.add_widget(promo)
 
         chips_scroll = ScrollView(do_scroll_y=False, size_hint_y=None, height=dp(48), bar_width=0)
@@ -536,18 +591,31 @@ class AromaSysApp(App):
         content.add_widget(self.eyebrow("Разделы"))
         grid = GridLayout(cols=2, spacing=dp(12), size_hint_y=None)
         grid.bind(minimum_height=grid.setter("height"))
+        tile_images = {
+            "Каталог": "katalog.jpg",
+            "Избранное": "heart.jpg",
+            "Мои заказы": "AromaSys.jpg",
+            "Профиль": "profile.jpg",
+        }
         for title, subtitle in TILES:
-            tile = AromaButton(self, variant="panel",
-                               text=f"[b]{title}[/b]\n[size=12]{subtitle}[/size]",
-                               markup=True, height=dp(104))
+            tile = Card(self, key="panel", radius=12, orientation="horizontal",
+                        padding=dp(9), spacing=dp(7), size_hint_y=None, height=dp(104))
+            tile.add_widget(Image(source=self.asset_path(tile_images[title]),
+                                  size_hint=(None, None), size=(dp(58), dp(58)),
+                                  allow_stretch=True, keep_ratio=True))
+            tile_button = AromaButton(self, variant="ghost",
+                                      text=f"[b]{title}[/b]\n[size=11]{subtitle}[/size]",
+                                      markup=True, height=dp(84))
+            tile_button.font_size = dp(13)
             if title == "Каталог":
-                tile.bind(on_press=lambda *_: self.show_catalog())
+                tile_button.bind(on_press=lambda *_: self.show_catalog())
             elif title == "Избранное":
-                tile.bind(on_press=lambda *_: self.show_favorites())
+                tile_button.bind(on_press=lambda *_: self.show_favorites())
             elif title == "Мои заказы":
-                tile.bind(on_press=lambda *_: self.show_orders())
+                tile_button.bind(on_press=lambda *_: self.show_orders())
             else:
-                tile.bind(on_press=lambda *_: self.show_profile())
+                tile_button.bind(on_press=lambda *_: self.show_profile())
+            tile.add_widget(tile_button)
             grid.add_widget(tile)
         content.add_widget(grid)
 
@@ -581,7 +649,12 @@ class AromaSysApp(App):
         self.page.add_widget(self.header(authenticated=True))
         scroll, content = self.scroll_content()
         content.add_widget(self.eyebrow("Личный кабинет"))
-        content.add_widget(self.label("Профиль", 28, bold=True, height=48))
+        profile_head = BoxLayout(size_hint_y=None, height=dp(76), spacing=dp(14))
+        profile_head.add_widget(Image(source=self.asset_path(self.profile_avatar),
+                                      size_hint=(None, None), size=(dp(64), dp(64)),
+                                      allow_stretch=True, keep_ratio=True))
+        profile_head.add_widget(self.label("Профиль", 27, bold=True, height=64))
+        content.add_widget(profile_head)
         panel = Card(self, key="panel", radius=10, orientation="vertical", padding=dp(16),
                      spacing=dp(10), size_hint_y=None, height=dp(206))
         panel.add_widget(self.label("Имя пользователя", 12, self.colors["muted"], height=22))
@@ -611,6 +684,21 @@ class AromaSysApp(App):
         self.page.add_widget(self.header(authenticated=True))
         scroll, content = self.scroll_content()
         content.add_widget(self.label("Редактирование профиля", 25, bold=True, height=52))
+        content.add_widget(self.label("Фото профиля", 13, self.colors["muted"], height=24))
+        avatars = ["pr1.jpg", "pr2.jpg", "pr3.jpg"]
+        avatar_row = BoxLayout(size_hint_y=None, height=dp(72), spacing=dp(12))
+        self._avatar_preview = Image(source=self.asset_path(self.profile_avatar),
+                                     size_hint=(None, None), size=(dp(64), dp(64)),
+                                     allow_stretch=True, keep_ratio=True)
+        avatar_row.add_widget(self._avatar_preview)
+        for name in avatars:
+            btn = Button(size_hint=(None, None), size=(dp(56), dp(56)),
+                         background_normal=self.asset_path(name),
+                         background_down=self.asset_path(name),
+                         background_color=(1, 1, 1, 1), border=(0, 0, 0, 0))
+            btn.bind(on_press=lambda _b, n=name: self._select_profile_avatar(n))
+            avatar_row.add_widget(btn)
+        content.add_widget(avatar_row)
         self.profile_name = ModernInput(self, hint_text="Имя пользователя", text=self.current_username,
                                         disabled=True)
         self.profile_email = ModernInput(self, hint_text="Email", text=self.current_email,
@@ -618,7 +706,7 @@ class AromaSysApp(App):
         self.profile_address = ModernInput(self, hint_text="Адрес доставки", text=self.delivery_address)
         for field in (self.profile_name, self.profile_email, self.profile_address):
             content.add_widget(field)
-        self.profile_status = self.label("Имя и email берутся из аккаунта. Здесь редактируется адрес доставки.",
+        self.profile_status = self.label("Имя и email берутся из аккаунта. Можно сменить фото и адрес доставки.",
                                          12, self.colors["muted"], height=38)
         content.add_widget(self.profile_status)
         save = AromaButton(self, text="СОХРАНИТЬ ИЗМЕНЕНИЯ")
@@ -628,6 +716,11 @@ class AromaSysApp(App):
         back.bind(on_press=lambda *_: self.show_profile())
         content.add_widget(back)
         self.page.add_widget(scroll)
+
+    def _select_profile_avatar(self, filename):
+        self.profile_avatar = filename
+        if getattr(self, "_avatar_preview", None) is not None:
+            self._avatar_preview.source = self.asset_path(filename)
 
     def save_profile(self, *_):
         address = self.profile_address.text.strip()
@@ -703,7 +796,7 @@ class AromaSysApp(App):
         scroll, content = self.scroll_content()
         self.current_scroll = scroll
         self.catalog_scroll = scroll
-        content.add_widget(self.label("Каталог", 28, bold=True, height=48))
+        content.add_widget(self.section_heading("katalog.jpg", "Каталог", "Подбери аромат по бренду и названию"))
         self.catalog_search_input = ModernInput(self, hint_text="Поиск по названию или бренду",
                                                 text=self.catalog_query)
         self.catalog_search_input.bind(text=lambda _i, v: setattr(self, "catalog_query", v))
@@ -797,14 +890,23 @@ class AromaSysApp(App):
     def product_card(self, item, favorite_screen=False):
         card = Card(self, key="panel", radius=10, orientation="horizontal",
                     padding=[dp(10), dp(10), dp(12), dp(10)], spacing=dp(12),
-                    size_hint_y=None, height=dp(142))
-        img_box = BoxLayout(size_hint=(None, None), size=(dp(100), dp(118)))
-        img_url = item.get("image_url")
+                    size_hint_y=None, height=dp(150))
+        img_box = BoxLayout(size_hint=(None, None), size=(dp(104), dp(126)),
+                            padding=[dp(2), dp(4)])
+        img_url = item.get("image_url") or self.local_product_image(item)
         if img_url:
             if img_url.startswith("/"):
                 img_url = f"{API_URL}{img_url}"
-            img_box.add_widget(AsyncImage(source=img_url, size_hint=(1, 1),
-                                          allow_stretch=True, keep_ratio=True))
+            img_btn = Button(size_hint=(1, 1),
+                             background_normal="", background_down="",
+                             background_color=(0, 0, 0, 0), border=(0, 0, 0, 0))
+            img_btn.bind(on_press=lambda *_args, p=deepcopy(item): self.show_product_detail(p))
+            img_inner = FloatLayout(size_hint=(1, 1))
+            img = AsyncImage(source=img_url, allow_stretch=True, keep_ratio=True,
+                             size_hint=(1, 1), pos_hint={"center_x": 0.5, "center_y": 0.5})
+            img_inner.add_widget(img)
+            img_inner.add_widget(img_btn)
+            img_box.add_widget(img_inner)
         else:
             img_box.add_widget(self.label("Нет фото", 11, self.colors["muted"], halign="center"))
         card.add_widget(img_box)
@@ -856,7 +958,7 @@ class AromaSysApp(App):
         self.page.add_widget(self.header(authenticated=True))
         scroll, content = self.scroll_content()
         content.add_widget(self.label(item.get("title", "Парфюм"), 27, bold=True, height=50))
-        image_url = item.get("image_url")
+        image_url = item.get("image_url") or self.local_product_image(item)
         if image_url:
             if image_url.startswith("/"):
                 image_url = f"{API_URL}{image_url}"
@@ -966,8 +1068,8 @@ class AromaSysApp(App):
                        self.product_concentration, self.product_volume, self.product_price,
                        self.product_stock, self.product_year):
             content.add_widget(widget)
-        content.add_widget(self.label("* Обязательные поля. Изменения сохраняются в PostgreSQL через API.",
-                                      12, self.colors["muted"], height=45))
+        content.add_widget(self.label("* Обязательные поля",
+                                      12, self.colors["muted"], height=28))
         self.product_form_status = self.label("", 13, self.colors["danger"], height=36)
         content.add_widget(self.product_form_status)
         save = AromaButton(self, text="СОХРАНИТЬ ТОВАР")
@@ -1059,7 +1161,7 @@ class AromaSysApp(App):
         scroll, content = self.scroll_content()
         self.current_scroll = scroll
         self.favorites_scroll = scroll
-        content.add_widget(self.label("Избранное", 28, bold=True, height=48))
+        content.add_widget(self.section_heading("heart.jpg", "Избранное", "Твои сохранённые ароматы"))
         self.favorites_results = BoxLayout(orientation="vertical", spacing=dp(10), size_hint_y=None)
         self.favorites_results.bind(minimum_height=self.favorites_results.setter("height"))
         content.add_widget(self.favorites_results)
