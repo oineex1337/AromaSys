@@ -221,8 +221,17 @@ class AromaSysApp(App):
         return bar
 
     def asset_path(self, filename):
-        """Путь к изображениям из backend/static для запуска из IDE и APK."""
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend", "static", filename))
+        """Ищет изображение и в полном проекте, и в отдельной папке Android-сборки."""
+        base = os.path.dirname(os.path.abspath(__file__))
+        candidates = (
+            os.path.join(base, "..", "backend", "static", filename),
+            os.path.join(base, "assets", filename),
+            os.path.join(base, filename),
+        )
+        for candidate in candidates:
+            if os.path.isfile(candidate):
+                return os.path.abspath(candidate)
+        return os.path.abspath(candidates[0])
 
     def section_heading(self, filename, title, subtitle=""):
         row = BoxLayout(size_hint_y=None, height=dp(62), spacing=dp(12))
@@ -483,6 +492,9 @@ class AromaSysApp(App):
                 self.auth_token = data.get("token")
                 self.current_username = data["username"]
                 self.current_email = data["email"]
+                self.delivery_address = data.get("delivery_address", "") or ""
+                self.delivery_address_draft = self.delivery_address
+                self.profile_avatar = data.get("avatar", "pr1.jpg") or "pr1.jpg"
             except KeyError:
                 self.set_status(self.status, "Сервер вернул неполные данные")
                 return
@@ -524,6 +536,9 @@ class AromaSysApp(App):
                 self.auth_token = data.get("token")
                 self.current_username = data["username"]
                 self.current_email = data["email"]
+                self.delivery_address = data.get("delivery_address", "") or ""
+                self.delivery_address_draft = self.delivery_address
+                self.profile_avatar = data.get("avatar", "pr1.jpg") or "pr1.jpg"
             except KeyError:
                 self.set_status(self.status, "Сервер вернул неполные данные")
                 return
@@ -544,6 +559,9 @@ class AromaSysApp(App):
         self.current_email = ""
         self.current_user_id = None
         self.auth_token = None
+        self.delivery_address = ""
+        self.delivery_address_draft = ""
+        self.profile_avatar = "pr1.jpg"
         self.local_favorites.clear()
         self.show_login()
         self.toast("Вы вышли из аккаунта")
@@ -619,55 +637,47 @@ class AromaSysApp(App):
             grid.add_widget(tile)
         content.add_widget(grid)
 
-        address = Card(self, key="panel", radius=8, orientation="vertical", padding=dp(16),
-                       spacing=dp(10), size_hint_y=None, height=dp(168))
-        address.add_widget(self.eyebrow("Адрес доставки"))
-        self.address_input = ModernInput(self, hint_text="Укажи адрес доставки",
-                                          text=self.delivery_address_draft or self.delivery_address)
-        self.address_input.bind(text=lambda _i, v: setattr(self, "delivery_address_draft", v))
-        address.add_widget(self.address_input)
-        save_address = AromaButton(self, variant="soft", text="СОХРАНИТЬ АДРЕС", height=44)
-        save_address.bind(on_press=self.save_address)
-        address.add_widget(save_address)
-        content.add_widget(address)
         content.add_widget(self.theme_button())
         self.page.add_widget(scroll)
-
-    def save_address(self, *_):
-        address = self.address_input.text.strip()
-        if len(address) < 5:
-            self.toast("Укажи полный адрес доставки")
-            return
-        self.delivery_address = address
-        self.delivery_address_draft = address
-        self.show_home(self.current_username, self.current_email)
-        self.toast("Адрес сохранён в текущем сеансе")
 
     def show_profile(self):
         self.active_screen = "profile"
         self.clear_page()
         self.page.add_widget(self.header(authenticated=True))
         scroll, content = self.scroll_content()
+
         content.add_widget(self.eyebrow("Личный кабинет"))
-        profile_head = BoxLayout(size_hint_y=None, height=dp(76), spacing=dp(14))
-        profile_head.add_widget(Image(source=self.asset_path(self.profile_avatar),
-                                      size_hint=(None, None), size=(dp(64), dp(64)),
-                                      allow_stretch=True, keep_ratio=True))
-        profile_head.add_widget(self.label("Профиль", 27, bold=True, height=64))
+        profile_head = BoxLayout(size_hint_y=None, height=dp(92), spacing=dp(14))
+        profile_head.add_widget(Image(
+            source=self.asset_path(self.profile_avatar),
+            size_hint=(None, None), size=(dp(78), dp(78)),
+            allow_stretch=True, keep_ratio=True,
+        ))
+        title_box = BoxLayout(orientation="vertical", spacing=dp(3))
+        title_box.add_widget(self.label(self.current_username or "Пользователь", 22,
+                                        bold=True, height=36))
+        title_box.add_widget(self.label("Профиль AromaSys", 13,
+                                        self.colors["muted"], height=26))
+        profile_head.add_widget(title_box)
         content.add_widget(profile_head)
-        panel = Card(self, key="panel", radius=10, orientation="vertical", padding=dp(16),
-                     spacing=dp(10), size_hint_y=None, height=dp(206))
-        panel.add_widget(self.label("Имя пользователя", 12, self.colors["muted"], height=22))
-        panel.add_widget(self.label(self.current_username, 17, bold=True, height=28))
+
+        panel = Card(self, key="panel", radius=14, orientation="vertical", padding=dp(16),
+                     spacing=dp(9), size_hint_y=None, height=dp(154))
+        panel.add_widget(self.eyebrow("Данные аккаунта"))
+        panel.add_widget(self.label(self.current_username, 17, bold=True, height=27))
         panel.add_widget(self.divider())
-        panel.add_widget(self.label("Email", 12, self.colors["muted"], height=22))
-        panel.add_widget(self.label(self.current_email, 16, height=28))
+        panel.add_widget(self.label(self.current_email, 14, self.colors["muted"], height=24))
         content.add_widget(panel)
-        address_panel = Card(self, key="panel", radius=10, orientation="vertical", padding=dp(16),
-                             spacing=dp(8), size_hint_y=None, height=dp(104))
-        address_panel.add_widget(self.label("Адрес доставки", 12, self.colors["muted"], height=22))
-        address_panel.add_widget(self.label(self.delivery_address or "Не указан", 15, height=30))
+
+        address_panel = Card(self, key="panel", radius=14, orientation="vertical", padding=dp(16),
+                             spacing=dp(7), size_hint_y=None, height=dp(112))
+        address_panel.add_widget(self.eyebrow("Адрес доставки"))
+        address_panel.add_widget(self.label(
+            self.delivery_address or "Добавь адрес при оформлении заказа или в настройках профиля.",
+            14, self.colors["text"] if self.delivery_address else self.colors["muted"], height=42,
+        ))
         content.add_widget(address_panel)
+
         edit = AromaButton(self, text="РЕДАКТИРОВАТЬ ПРОФИЛЬ")
         edit.bind(on_press=lambda *_: self.show_profile_edit())
         content.add_widget(edit)
@@ -683,35 +693,55 @@ class AromaSysApp(App):
         self.clear_page()
         self.page.add_widget(self.header(authenticated=True))
         scroll, content = self.scroll_content()
-        content.add_widget(self.label("Редактирование профиля", 25, bold=True, height=52))
-        content.add_widget(self.label("Фото профиля", 13, self.colors["muted"], height=24))
-        avatars = ["pr1.jpg", "pr2.jpg", "pr3.jpg"]
-        avatar_row = BoxLayout(size_hint_y=None, height=dp(72), spacing=dp(12))
-        self._avatar_preview = Image(source=self.asset_path(self.profile_avatar),
-                                     size_hint=(None, None), size=(dp(64), dp(64)),
-                                     allow_stretch=True, keep_ratio=True)
+
+        content.add_widget(self.eyebrow("Настройки аккаунта"))
+        content.add_widget(self.label("Редактирование профиля", 25, bold=True, height=44))
+
+        avatar_panel = Card(self, key="panel", radius=14, orientation="vertical", padding=dp(14),
+                            spacing=dp(10), size_hint_y=None, height=dp(154))
+        avatar_panel.add_widget(self.label("Фотография профиля", 14, bold=True, height=24))
+        avatar_row = BoxLayout(size_hint_y=None, height=dp(82), spacing=dp(12))
+        self._avatar_preview = Image(
+            source=self.asset_path(self.profile_avatar),
+            size_hint=(None, None), size=(dp(76), dp(76)),
+            allow_stretch=True, keep_ratio=True,
+        )
         avatar_row.add_widget(self._avatar_preview)
-        for name in avatars:
-            btn = Button(size_hint=(None, None), size=(dp(56), dp(56)),
-                         background_normal=self.asset_path(name),
-                         background_down=self.asset_path(name),
-                         background_color=(1, 1, 1, 1), border=(0, 0, 0, 0))
+        for name in ("pr1.jpg", "pr2.jpg", "pr3.jpg"):
+            btn = Button(
+                size_hint=(None, None), size=(dp(58), dp(58)),
+                background_normal=self.asset_path(name),
+                background_down=self.asset_path(name),
+                background_color=(1, 1, 1, 1), border=(0, 0, 0, 0),
+            )
             btn.bind(on_press=lambda _b, n=name: self._select_profile_avatar(n))
             avatar_row.add_widget(btn)
-        content.add_widget(avatar_row)
-        self.profile_name = ModernInput(self, hint_text="Имя пользователя", text=self.current_username,
-                                        disabled=True)
-        self.profile_email = ModernInput(self, hint_text="Email", text=self.current_email,
-                                         disabled=True)
-        self.profile_address = ModernInput(self, hint_text="Адрес доставки", text=self.delivery_address)
-        for field in (self.profile_name, self.profile_email, self.profile_address):
-            content.add_widget(field)
-        self.profile_status = self.label("Имя и email берутся из аккаунта. Можно сменить фото и адрес доставки.",
-                                         12, self.colors["muted"], height=38)
+        avatar_panel.add_widget(avatar_row)
+        content.add_widget(avatar_panel)
+
+        fields = Card(self, key="panel", radius=14, orientation="vertical", padding=dp(14),
+                      spacing=dp(8), size_hint_y=None, height=dp(292))
+        fields.add_widget(self.label("Имя пользователя", 12, self.colors["muted"], height=20))
+        self.profile_name = ModernInput(self, hint_text="Твой ник", text=self.current_username)
+        fields.add_widget(self.profile_name)
+        fields.add_widget(self.label("Email аккаунта", 12, self.colors["muted"], height=20))
+        self.profile_email = ModernInput(self, hint_text="Email", text=self.current_email, disabled=True)
+        fields.add_widget(self.profile_email)
+        fields.add_widget(self.label("Адрес доставки", 12, self.colors["muted"], height=20))
+        self.profile_address = ModernInput(
+            self, hint_text="Город, улица, дом, квартира", text=self.delivery_address,
+        )
+        fields.add_widget(self.profile_address)
+        content.add_widget(fields)
+
+        self.profile_status = self.label(
+            "Ник и адрес сохраняются в аккаунте. Email изменить нельзя.",
+            12, self.colors["muted"], height=38,
+        )
         content.add_widget(self.profile_status)
-        save = AromaButton(self, text="СОХРАНИТЬ ИЗМЕНЕНИЯ")
-        save.bind(on_press=self.save_profile)
-        content.add_widget(save)
+        self.profile_save_button = AromaButton(self, text="СОХРАНИТЬ ИЗМЕНЕНИЯ")
+        self.profile_save_button.bind(on_press=self.save_profile)
+        content.add_widget(self.profile_save_button)
         back = AromaButton(self, variant="soft", text="ОТМЕНА")
         back.bind(on_press=lambda *_: self.show_profile())
         content.add_widget(back)
@@ -723,11 +753,45 @@ class AromaSysApp(App):
             self._avatar_preview.source = self.asset_path(filename)
 
     def save_profile(self, *_):
+        username = self.profile_name.text.strip()
         address = self.profile_address.text.strip()
-        self.delivery_address = address
-        self.delivery_address_draft = address
-        self.show_profile()
-        self.toast("Профиль обновлён в текущем сеансе")
+        if len(username) < 2:
+            self.set_status(self.profile_status, "Ник должен содержать минимум 2 символа")
+            return
+        if len(username) > 80:
+            self.set_status(self.profile_status, "Ник не должен превышать 80 символов")
+            return
+        if len(address) > 500:
+            self.set_status(self.profile_status, "Адрес слишком длинный")
+            return
+
+        self.profile_save_button.disabled = True
+        self.profile_save_button.text = "СОХРАНЕНИЕ..."
+        self.set_status(self.profile_status, "Сохраняем профиль...", error=False)
+
+        def success(data, _code):
+            self.current_username = data.get("username", username)
+            self.current_email = data.get("email", self.current_email)
+            self.delivery_address = data.get("delivery_address", address) or ""
+            self.delivery_address_draft = self.delivery_address
+            self.profile_avatar = data.get("avatar", self.profile_avatar) or "pr1.jpg"
+            self.show_profile()
+            self.toast("Профиль сохранён")
+
+        def failure(message):
+            self.profile_save_button.disabled = False
+            self.profile_save_button.text = "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+            self.set_status(self.profile_status, message)
+
+        self.async_request(
+            "PATCH", "/api/profile",
+            json_data={
+                "username": username,
+                "delivery_address": address,
+                "avatar": self.profile_avatar,
+            },
+            on_success=success, on_error=failure, timeout=12,
+        )
 
     def show_orders(self):
         self.active_screen = "orders"
@@ -751,10 +815,15 @@ class AromaSysApp(App):
         if not rows:
             self.orders_results.add_widget(self.label("Заказов пока нет.", 14, self.colors["muted"], height=50))
         for order in rows:
-            panel = Card(self, key="panel", radius=8, orientation="vertical", padding=dp(14),
-                         spacing=dp(5), size_hint_y=None, height=dp(92))
+            panel = Card(self, key="panel", radius=12, orientation="vertical", padding=dp(14),
+                         spacing=dp(5), size_hint_y=None, height=dp(118))
             panel.add_widget(self.label(f"Заказ №{order['id']}", 16, bold=True, height=25))
-            panel.add_widget(self.label(f"Статус: {order['status']} · Сумма: {order['total_amount']} ₽", 13, height=24))
+            panel.add_widget(self.label(
+                f"Статус: {order['status']} · Сумма: {float(order['total_amount']):,.0f} ₽".replace(",", " "),
+                13, height=24,
+            ))
+            address = order.get("delivery_address") or "Адрес не указан"
+            panel.add_widget(self.label(f"Доставка: {address}", 12, self.colors["muted"], height=28))
             self.orders_results.add_widget(panel)
         self.orders_status.text = f"Заказов: {len(rows)}"
 
@@ -1007,32 +1076,219 @@ class AromaSysApp(App):
         self.page.add_widget(scroll)
 
     def order_product(self, item):
-        if not self.current_user_id:
+        """Открывает полноценное окно оформления заказа для выбранного товара."""
+        if not self.current_user_id or not self.auth_token:
             self.toast("Сначала войди в аккаунт")
             return
         try:
-            amount = float(item.get("price", 0))
+            price = float(item.get("price", 0))
             sku_id = int(item.get("sku_id"))
+            stock = int(item.get("stock", 0))
         except (TypeError, ValueError):
-            self.toast("Не удалось определить товар и цену")
+            self.toast("Не удалось определить товар, цену или остаток")
             return
-        if amount <= 0:
-            self.toast("Некорректная цена товара")
+        if price <= 0 or sku_id <= 0:
+            self.toast("Некорректные данные товара")
             return
-        payload = {"user_id": self.current_user_id, "status": "new", "total_amount": amount}
-        self.toast("Создаём заказ...")
-        def order_created(data, _code):
+        if stock <= 0:
+            self.toast("Этого товара сейчас нет в наличии")
+            return
+
+        self.checkout_item = deepcopy(item)
+        self.checkout_price = price
+        self.checkout_quantity = 1
+        self.checkout_max_quantity = min(stock, 99)
+
+        modal = ModalView(
+            size_hint=(0.94, 0.88), auto_dismiss=False,
+            background_color=(0, 0, 0, 0.62),
+        )
+        self.checkout_modal = modal
+        panel = Card(
+            self, key="panel", radius=18, orientation="vertical",
+            padding=dp(16), spacing=dp(10),
+        )
+
+        header = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        header.add_widget(self.label("Оформление заказа", 21, bold=True, height=40))
+        close = AromaButton(self, variant="soft", text="×",
+                            size_hint=(None, None), size=(dp(42), dp(42)), height=dp(42))
+        close.font_size = dp(24)
+        close.bind(on_press=lambda *_: modal.dismiss())
+        header.add_widget(close)
+        panel.add_widget(header)
+        panel.add_widget(self.label(
+            "Проверь товар, укажи адрес доставки и подтверди заказ.",
+            12, self.colors["muted"], height=30,
+        ))
+
+        body_scroll = ScrollView(do_scroll_x=False, bar_width=dp(2), scroll_type=["bars", "content"])
+        body = BoxLayout(
+            orientation="vertical", spacing=dp(10), size_hint_y=None,
+            padding=[0, dp(2), 0, dp(8)],
+        )
+        body.bind(minimum_height=body.setter("height"))
+
+        product_panel = Card(
+            self, key="soft", radius=12, orientation="horizontal",
+            padding=dp(10), spacing=dp(12), size_hint_y=None, height=dp(104),
+        )
+        image_source = item.get("image_url") or self.local_product_image(item)
+        if image_source and str(image_source).startswith("/"):
+            image_source = f"{API_URL}{image_source}"
+        if image_source:
+            image_widget = AsyncImage(
+                source=image_source, size_hint=(None, None), size=(dp(82), dp(82)),
+                allow_stretch=True, keep_ratio=True,
+            )
+        else:
+            image_widget = Image(
+                source=self.asset_path("AromaSys.jpg"),
+                size_hint=(None, None), size=(dp(82), dp(82)),
+                allow_stretch=True, keep_ratio=True,
+            )
+        product_panel.add_widget(image_widget)
+        product_info = BoxLayout(orientation="vertical", spacing=dp(3))
+        product_info.add_widget(self.label(item.get("title", "Парфюм"), 15, bold=True, height=27))
+        product_info.add_widget(self.label(item.get("brand", "AromaSys"), 12,
+                                           self.colors["muted"], height=22))
+        product_info.add_widget(self.label(
+            f"{item.get('volume_ml', '—')} мл · {self._money(price)} за шт.",
+            13, self.colors["accent_text"], bold=True, height=24,
+        ))
+        product_panel.add_widget(product_info)
+        body.add_widget(product_panel)
+
+        quantity_panel = Card(
+            self, key="panel", radius=12, orientation="vertical",
+            padding=dp(12), spacing=dp(8), size_hint_y=None, height=dp(94),
+        )
+        quantity_panel.add_widget(self.label("Количество", 13, self.colors["muted"], height=20))
+        quantity_row = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(12))
+        minus = AromaButton(self, variant="soft", text="−",
+                            size_hint=(None, None), size=(dp(48), dp(42)), height=dp(42))
+        minus.font_size = dp(22)
+        minus.bind(on_press=lambda *_: self._change_checkout_quantity(-1))
+        plus = AromaButton(self, variant="soft", text="+",
+                           size_hint=(None, None), size=(dp(48), dp(42)), height=dp(42))
+        plus.font_size = dp(22)
+        plus.bind(on_press=lambda *_: self._change_checkout_quantity(1))
+        self.checkout_quantity_label = self.label("1", 17, bold=True, height=42, halign="center")
+        quantity_row.add_widget(minus)
+        quantity_row.add_widget(self.checkout_quantity_label)
+        quantity_row.add_widget(plus)
+        quantity_row.add_widget(Widget())
+        quantity_row.add_widget(self.label(f"В наличии: {stock}", 12,
+                                           self.colors["muted"], height=42))
+        quantity_panel.add_widget(quantity_row)
+        body.add_widget(quantity_panel)
+
+        address_panel = Card(
+            self, key="panel", radius=12, orientation="vertical",
+            padding=dp(12), spacing=dp(7), size_hint_y=None, height=dp(140),
+        )
+        address_panel.add_widget(self.label("Адрес доставки", 14, bold=True, height=24))
+        self.checkout_address_input = ModernInput(
+            self, hint_text="Город, улица, дом, квартира",
+            text=self.delivery_address or self.delivery_address_draft,
+        )
+        address_panel.add_widget(self.checkout_address_input)
+        address_panel.add_widget(self.label(
+            "Этот адрес сохранится в профиле и в заказе.", 11,
+            self.colors["muted"], height=20,
+        ))
+        body.add_widget(address_panel)
+
+        total_panel = Card(
+            self, key="soft", radius=12, orientation="vertical",
+            padding=dp(12), spacing=dp(4), size_hint_y=None, height=dp(82),
+        )
+        total_row = BoxLayout(size_hint_y=None, height=dp(30))
+        total_row.add_widget(self.label("Итого по заказу", 14, bold=True, height=30))
+        self.checkout_total_label = self.label(self._money(price), 19,
+                                               self.colors["accent_text"], bold=True,
+                                               height=30, halign="right")
+        total_row.add_widget(self.checkout_total_label)
+        total_panel.add_widget(total_row)
+        total_panel.add_widget(self.label("После подтверждения заказ появится в разделе «Мои заказы».",
+                                          10, self.colors["muted"], height=20))
+        body.add_widget(total_panel)
+        body_scroll.add_widget(body)
+        panel.add_widget(body_scroll)
+
+        self.checkout_status = self.label("", 12, self.colors["danger"], height=26)
+        panel.add_widget(self.checkout_status)
+        self.checkout_submit_button = AromaButton(self, text="ПОДТВЕРДИТЬ ЗАКАЗ",
+                                                  height=dp(50))
+        self.checkout_submit_button.bind(on_press=self._submit_checkout)
+        panel.add_widget(self.checkout_submit_button)
+        modal.add_widget(panel)
+        modal.open()
+        self._update_checkout_total()
+
+    @staticmethod
+    def _money(value):
+        try:
+            return f"{float(value):,.0f} ₽".replace(",", " ")
+        except (TypeError, ValueError):
+            return "—"
+
+    def _change_checkout_quantity(self, delta):
+        current = int(getattr(self, "checkout_quantity", 1))
+        maximum = int(getattr(self, "checkout_max_quantity", 1))
+        self.checkout_quantity = max(1, min(maximum, current + delta))
+        self._update_checkout_total()
+
+    def _update_checkout_total(self):
+        if getattr(self, "checkout_quantity_label", None) is not None:
+            self.checkout_quantity_label.text = str(self.checkout_quantity)
+        if getattr(self, "checkout_total_label", None) is not None:
+            self.checkout_total_label.text = self._money(
+                self.checkout_price * self.checkout_quantity
+            )
+
+    def _submit_checkout(self, *_):
+        address = self.checkout_address_input.text.strip()
+        if len(address) < 5:
+            self.set_status(self.checkout_status, "Укажи полный адрес доставки")
+            return
+        if len(address) > 500:
+            self.set_status(self.checkout_status, "Адрес не должен превышать 500 символов")
+            return
+
+        item = self.checkout_item
+        try:
+            sku_id = int(item["sku_id"])
+        except (KeyError, TypeError, ValueError):
+            self.set_status(self.checkout_status, "Не удалось определить товар")
+            return
+
+        self.checkout_submit_button.disabled = True
+        self.checkout_submit_button.text = "ОФОРМЛЯЕМ..."
+        self.set_status(self.checkout_status, "Отправляем заказ на сервер...", error=False)
+
+        def success(data, _code):
+            self.delivery_address = address
+            self.delivery_address_draft = address
+            self.checkout_modal.dismiss()
             order_id = data.get("id")
-            if not order_id:
-                self.toast("Сервер не вернул номер заказа")
-                return
-            item_payload = {"order_id": order_id, "sku_id": sku_id,
-                            "price": amount, "quantity": 1}
-            self.async_request("POST", "/api/order-items", json_data=item_payload,
-                on_success=lambda _d, _c: self.toast(f"Заказ №{order_id} оформлен"),
-                on_error=lambda message: self.toast(f"Заказ создан, но позиция не добавлена: {message}"), timeout=12)
-        self.async_request("POST", "/api/orders", json_data=payload,
-                           on_success=order_created, on_error=self.toast, timeout=12)
+            self.toast(f"Заказ №{order_id} оформлен. Сумма: {self._money(data.get('total_amount'))}")
+            self.show_orders()
+
+        def failure(message):
+            self.checkout_submit_button.disabled = False
+            self.checkout_submit_button.text = "ПОДТВЕРДИТЬ ЗАКАЗ"
+            self.set_status(self.checkout_status, message)
+
+        self.async_request(
+            "POST", "/api/checkout",
+            json_data={
+                "sku_id": sku_id,
+                "quantity": self.checkout_quantity,
+                "delivery_address": address,
+            },
+            on_success=success, on_error=failure, timeout=15,
+        )
 
     def show_product_form(self, item=None):
         if not self.can_manage_products():

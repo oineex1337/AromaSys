@@ -22,6 +22,8 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
+    delivery_address: Mapped[str] = mapped_column(String(500), nullable=False, default="", server_default="")
+    avatar: Mapped[str] = mapped_column(String(40), nullable=False, default="pr1.jpg", server_default="pr1.jpg")
 
     favorites: Mapped[list["Favorite"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
@@ -135,6 +137,7 @@ class Order(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="new", server_default="new")
     total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    delivery_address: Mapped[str] = mapped_column(String(500), nullable=False, default="", server_default="")
     created_at: Mapped[object] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user: Mapped[User] = relationship(back_populates="orders")

@@ -213,7 +213,7 @@ def register_crud_routes(app):
         Order,
         OrderCreate,
         OrderUpdate,
-        ["id", "user_id", "status", "total_amount", "created_at"],
+        ["id", "user_id", "status", "total_amount", "delivery_address", "created_at"],
         admin=False,
         prepare_create=lambda s, v: {
             **v,

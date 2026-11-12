@@ -32,6 +32,18 @@ class UserUpdate(Schema):
 class UserOut(BaseModel):
     id: int; username: str; email: str
 
+class ProfileUpdate(Schema):
+    username: str | None = Field(default=None, min_length=2, max_length=80)
+    delivery_address: str | None = Field(default=None, max_length=500)
+    avatar: Literal['pr1.jpg', 'pr2.jpg', 'pr3.jpg'] | None = None
+
+class ProfileOut(BaseModel):
+    id: int
+    username: str
+    email: str
+    delivery_address: str = ""
+    avatar: str = "pr1.jpg"
+
 class BrandCreate(Schema): name: str = Field(min_length=1, max_length=120)
 class BrandUpdate(Schema): name: str | None = Field(default=None, min_length=1, max_length=120)
 class BrandOut(BaseModel): id: int; name: str
@@ -68,10 +80,22 @@ class FavoriteOut(BaseModel): id: int; user_id: int; sku_id: int; created_at: da
 class OrderCreate(Schema):
     user_id: int = Field(gt=0); status: OrderStatus = 'new'
     total_amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
+    delivery_address: str = Field(default="", max_length=500)
 class OrderUpdate(Schema):
     status: OrderStatus | None = None
     total_amount: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
-class OrderOut(BaseModel): id: int; user_id: int; status: str; total_amount: Decimal; created_at: datetime
+class OrderOut(BaseModel):
+    id: int
+    user_id: int
+    status: str
+    total_amount: Decimal
+    delivery_address: str = ""
+    created_at: datetime
+
+class CheckoutCreate(Schema):
+    sku_id: int = Field(gt=0)
+    quantity: int = Field(ge=1, le=99)
+    delivery_address: str = Field(min_length=5, max_length=500)
 
 class OrderItemCreate(Schema):
     order_id: int = Field(gt=0); sku_id: int = Field(gt=0)

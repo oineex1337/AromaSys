@@ -17,17 +17,20 @@ backend/
 │   ├── catalog_router.py  # /catalog, /api/catalog-items
 │   ├── favorite_router.py # /favorites, /api/favorites
 │   ├── health_router.py   # /health
+│   ├── order_router.py    # /api/checkout
 │   └── crud_router.py     # универсальные /api/{entity}
 │
 ├── services/              # Бизнес-логика
 │   ├── auth_service.py
 │   ├── catalog_service.py
-│   └── favorite_service.py
+│   ├── favorite_service.py
+│   └── order_service.py
 │
 ├── repositories/          # Слой доступа к данным
 │   ├── user_repository.py
 │   ├── catalog_repository.py
 │   ├── favorite_repository.py
+│   ├── order_repository.py
 │   └── base_repository.py
 │
 ├── core/                  # Общие утилиты
@@ -76,6 +79,16 @@ LOG_DIR=logs
 ```
 
 `database.py` и `admin_config.py` читают только env — секреты не захардкожены в бизнес-логике.
+
+## Обновление схемы после изменений профиля и заказов
+
+После загрузки новой версии backend на сервере выполни из каталога `backend`:
+
+```bash
+alembic upgrade head
+```
+
+Миграция добавляет в `users` сохранённый адрес и аватар, а в `orders` адрес доставки. Перед миграцией на рабочей базе сделай резервную копию PostgreSQL. После миграции перезапусти backend-сервис.
 
 ## Обработка исключений и журналирование
 

@@ -21,6 +21,8 @@ class AuthService:
             "user_id": user.id,
             "username": user.username,
             "email": user.email,
+            "delivery_address": user.delivery_address or "",
+            "avatar": user.avatar or "pr1.jpg",
             "token": issue_token(user),
         }
 
@@ -36,5 +38,7 @@ class AuthService:
             "user_id": user.id,
             "username": user.username,
             "email": user.email,
+            "delivery_address": user.delivery_address or "",
+            "avatar": user.avatar or "pr1.jpg",
             "token": issue_token(user),
         }

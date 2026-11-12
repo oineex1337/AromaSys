@@ -22,6 +22,7 @@ from routers import (
     catalog_bp,
     favorite_bp,
     health_bp,
+    orders_bp,
     register_crud_routes,
 )
 
@@ -39,6 +40,7 @@ def create_app() -> Flask:
     app.register_blueprint(catalog_bp)
     app.register_blueprint(favorite_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(orders_bp)
 
     # Универсальные CRUD-роуты
     register_crud_routes(app)
